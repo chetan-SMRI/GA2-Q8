@@ -4,9 +4,10 @@ import json, math
 from pathlib import Path
 
 app = FastAPI()
+app.router.redirect_slashes = False
 
 @app.middleware("http")
-async def add_cors_headers(request: Request, call_next):
+async def cors_everywhere(request: Request, call_next):
     if request.method == "OPTIONS":
         return Response(
             status_code=200,
@@ -28,17 +29,9 @@ DATA_PATH = Path(__file__).resolve().parent.parent / "q-vercel-latency.json"
 with open(DATA_PATH, "r") as f:
     data = json.load(f)
 
-@app.get("/")
-def home():
-    return {"message": "POST to /api"}
-
-@app.post("/api")
-async def analytics(request: Request):
-    body = await request.json()
-
+def calculate(body):
     regions = body["regions"]
     threshold = body["threshold_ms"]
-
     result = {}
 
     for region in regions:
@@ -57,6 +50,18 @@ async def analytics(request: Request):
             "breaches": sum(1 for x in latencies if x > threshold),
         }
 
+    return result
+
+@app.get("/")
+def home():
+    return {"message": "POST to /api"}
+
+@app.post("/")
+@app.post("/api")
+@app.post("/api/")
+async def analytics(request: Request):
+    body = await request.json()
+    result = calculate(body)
     return JSONResponse(
         content=result,
         headers={"Access-Control-Allow-Origin": "*"},
