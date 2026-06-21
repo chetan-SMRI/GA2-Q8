@@ -1,20 +1,27 @@
-from fastapi.middleware.cors import CORSMiddleware
-import json
-import math
-from pathlib import Path
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
-
+import json, math
+from pathlib import Path
 
 app = FastAPI()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["POST", "OPTIONS"],
-    allow_headers=["*"],
-    allow_credentials=False,
-)
+@app.middleware("http")
+async def add_cors_headers(request: Request, call_next):
+    if request.method == "OPTIONS":
+        return Response(
+            status_code=200,
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+                "Access-Control-Allow-Headers": "*",
+            },
+        )
+
+    response = await call_next(request)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    return response
 
 DATA_PATH = Path(__file__).resolve().parent.parent / "q-vercel-latency.json"
 
@@ -24,17 +31,6 @@ with open(DATA_PATH, "r") as f:
 @app.get("/")
 def home():
     return {"message": "POST to /api"}
-
-@app.options("/api")
-async def options_api():
-    return Response(
-        status_code=200,
-        headers={
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "POST, OPTIONS",
-            "Access-Control-Allow-Headers": "*"
-        }
-    )
 
 @app.post("/api")
 async def analytics(request: Request):
@@ -58,12 +54,10 @@ async def analytics(request: Request):
             "avg_latency": sum(latencies) / len(latencies),
             "p95_latency": latencies_sorted[p95_index],
             "avg_uptime": sum(uptimes) / len(uptimes),
-            "breaches": sum(1 for x in latencies if x > threshold)
+            "breaches": sum(1 for x in latencies if x > threshold),
         }
 
     return JSONResponse(
         content=result,
-        headers={
-            "Access-Control-Allow-Origin": "*"
-        }
+        headers={"Access-Control-Allow-Origin": "*"},
     )
