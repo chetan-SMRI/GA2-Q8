@@ -1,17 +1,17 @@
-from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 import json
 import math
 from pathlib import Path
+from fastapi import FastAPI, Request, Response
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["*"],
+    allow_methods=["POST", "OPTIONS"],
     allow_headers=["*"],
+    allow_credentials=False,
 )
 
 DATA_PATH = Path(__file__).resolve().parent.parent / "q-vercel-latency.json"
@@ -22,6 +22,17 @@ with open(DATA_PATH, "r") as f:
 @app.get("/")
 def home():
     return {"message": "POST to /api"}
+
+@app.options("/api")
+async def options_api():
+    return Response(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "*"
+        }
+    )
 
 @app.post("/api")
 async def analytics(request: Request):
