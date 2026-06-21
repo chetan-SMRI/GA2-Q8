@@ -35,7 +35,7 @@ async def analytics(request: Request):
         rows = [r for r in data if r["region"] == region]
 
         latencies = [r["latency_ms"] for r in rows]
-        uptimes = [r["uptime"] for r in rows]
+        uptimes = [r["uptime_pct"] for r in rows]
 
         latencies_sorted = sorted(latencies)
         p95_index = math.ceil(0.95 * len(latencies_sorted)) - 1
