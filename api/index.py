@@ -7,7 +7,7 @@ from collections import defaultdict, deque
 
 app = FastAPI()
 
-YOUR_EMAIL = "https://ga-0-vercel.vercel.app/ping"
+YOUR_EMAIL = "24f2008500@ds.study.iitm.ac.in"
 
 ALLOWED_ORIGINS = [
     "https://app-v3s45q.example.com",
