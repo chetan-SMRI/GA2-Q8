@@ -7,14 +7,10 @@ from collections import defaultdict, deque
 
 app = FastAPI()
 
-YOUR_EMAIL = "director@shrimayanand.com"
+YOUR_EMAIL = "https://ga-0-vercel.vercel.app/ping"
 
 ALLOWED_ORIGINS = [
     "https://app-v3s45q.example.com",
-
-    # Put your exam/grader page origin here also.
-    # Example:
-    # "https://exam.example.com",
 ]
 
 RATE_LIMIT = 15
