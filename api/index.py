@@ -1,4 +1,3 @@
-YOUR_EMAIL = "24f2008500@ds.study.iitm.ac.in"
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -23,6 +22,8 @@ app.add_middleware(
 RATE_LIMIT = 15
 WINDOW = 10
 requests = defaultdict(deque)
+
+EMAIL = "24f2008500@ds.study.iitm.ac.in"
 
 
 @app.middleware("http")
