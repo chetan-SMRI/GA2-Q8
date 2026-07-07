@@ -10,10 +10,7 @@ app = FastAPI()
 
 ALLOWED_ORIGINS = [
     "https://app-v3s45q.example.com",
-
-    # Add the exam/grader website origin here if you know it.
-    # Example:
-    # "https://exam-page-domain.com",
+    "https://exam.sanand.workers.dev"
 ]
 
 app.add_middleware(
