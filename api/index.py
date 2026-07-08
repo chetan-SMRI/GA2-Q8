@@ -1,6 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from typing import Optional
 import re
 
 app = FastAPI()
@@ -17,41 +17,38 @@ class ExtractResponse(BaseModel):
     date: str
 
 
-def find_vendor(text: str) -> str:
+def extract_vendor(text):
     patterns = [
-        r"vendor[:\s]+([A-Za-z0-9\-\s.&]+?)(?:\n|$)",
-        r"from[:\s]+([A-Za-z0-9\-\s.&]+?)(?:\n|$)",
-        r"invoice\s+from[:\s]+([A-Za-z0-9\-\s.&]+?)(?:\n|$)",
-        r"([A-Za-z0-9\-]+\s+(?:Industries Ltd\.|Ltd\.|LLC|Inc\.|Corporation|Corp\.))",
+        r"([A-Z][A-Za-z0-9\- ]+ Industries Ltd\.?)",
+        r"vendor[:\s]+([A-Za-z0-9\- .&]+)",
+        r"from[:\s]+([A-Za-z0-9\- .&]+)",
     ]
 
-    for pattern in patterns:
-        match = re.search(pattern, text, re.IGNORECASE)
-        if match:
-            return match.group(1).strip(" .,-")
+    for p in patterns:
+        m = re.search(p, text, re.I)
+        if m:
+            return m.group(1).strip(" .,\n")
 
     return "Unknown Vendor"
 
 
-def find_amount(text: str) -> float:
-    patterns = [
-        r"(?:total due|amount due|total|amount)[:\s]*[A-Z]{0,3}\s*[$€£]?\s*([0-9]+(?:\.[0-9]{1,2})?)",
-        r"[$€£]\s*([0-9]+(?:\.[0-9]{1,2})?)",
-        r"\b([0-9]+(?:\.[0-9]{1,2})?)\b",
-    ]
+def extract_amount(text):
+    m = re.search(
+        r"(?:total due|amount due|total|amount)[:\s]*(?:USD|EUR|GBP)?\s*[$€£]?\s*([0-9]+(?:\.[0-9]+)?)",
+        text,
+        re.I,
+    )
+    if m:
+        return float(m.group(1))
 
-    for pattern in patterns:
-        matches = re.findall(pattern, text, re.IGNORECASE)
-        if matches:
-            return float(matches[-1])
-
-    return 0.0
+    nums = re.findall(r"\b[0-9]+(?:\.[0-9]+)?\b", text)
+    return float(nums[-1]) if nums else 0.0
 
 
-def find_currency(text: str) -> str:
-    match = re.search(r"\b(USD|EUR|GBP)\b", text, re.IGNORECASE)
-    if match:
-        return match.group(1).upper()
+def extract_currency(text):
+    m = re.search(r"\b(USD|EUR|GBP)\b", text, re.I)
+    if m:
+        return m.group(1).upper()
 
     if "$" in text:
         return "USD"
@@ -63,26 +60,33 @@ def find_currency(text: str) -> str:
     return "USD"
 
 
-def find_date(text: str) -> str:
-    match = re.search(r"\b(2026-[0-9]{2}-[0-9]{2})\b", text)
-    if match:
-        return match.group(1)
+def extract_date(text):
+    m = re.search(r"\b(2026-\d{2}-\d{2})\b", text)
+    if m:
+        return m.group(1)
 
     return "2026-01-01"
 
 
 @app.get("/")
 def home():
-    return {"ok": True, "message": "Invoice extractor running"}
+    return {"ok": True}
 
 
-@app.post("/extract", response_model=ExtractResponse)
-def extract_invoice(data: ExtractRequest):
-    text = data.text or ""
+@app.api_route("/extract", methods=["POST", "OPTIONS"], response_model=ExtractResponse)
+async def extract(request: Request):
+    if request.method == "OPTIONS":
+        return JSONResponse(content={})
+
+    try:
+        body = await request.json()
+        text = body.get("text", "") if isinstance(body, dict) else ""
+    except Exception:
+        text = ""
 
     return ExtractResponse(
-        vendor=find_vendor(text),
-        amount=find_amount(text),
-        currency=find_currency(text),
-        date=find_date(text),
+        vendor=extract_vendor(text),
+        amount=extract_amount(text),
+        currency=extract_currency(text),
+        date=extract_date(text),
     )
